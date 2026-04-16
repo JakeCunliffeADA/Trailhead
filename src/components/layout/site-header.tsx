@@ -2,6 +2,8 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
+const navLinkClass = "text-sm text-muted-foreground hover:text-foreground";
+
 export async function SiteHeader() {
   const session = await auth();
 
@@ -15,24 +17,9 @@ export async function SiteHeader() {
         <nav className="flex items-center gap-4">
           {session?.user ? (
             <>
-              <Link
-                href="/gear"
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Gear
-              </Link>
-              <Link
-                href="/kits"
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Kits
-              </Link>
-              <Link
-                href="/trips"
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Trips
-              </Link>
+              <Link href="/gear" className={navLinkClass}>Gear</Link>
+              <Link href="/kits" className={navLinkClass}>Kits</Link>
+              <Link href="/trips" className={navLinkClass}>Trips</Link>
               <SignOutButton />
             </>
           ) : (

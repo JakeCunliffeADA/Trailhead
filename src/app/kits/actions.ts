@@ -1,9 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
-import { auth } from "@/auth";
+import { requireUserId, firstZodError } from "@/lib/action-helpers";
 import {
   createKitList,
   updateKitList,
@@ -15,10 +14,6 @@ import {
 
 export type ActionResult = { error: string } | { success: true; id?: string };
 
-// ---------------------------------------------------------------------------
-// Kit list actions
-// ---------------------------------------------------------------------------
-
 const kitListSchema = z.object({
   name: z.string().min(1, "Name is required").max(120),
   description: z.string().max(500).optional(),
@@ -28,13 +23,11 @@ export async function createKitListAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Not authenticated" };
-
+  const userId = await requireUserId();
   const parsed = kitListSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  if (!parsed.success) return { error: firstZodError(parsed.error) };
 
-  const id = await createKitList(session.user.id, parsed.data);
+  const id = await createKitList(userId, parsed.data);
   revalidatePath("/kits");
   return { success: true, id };
 }
@@ -44,28 +37,21 @@ export async function updateKitListAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Not authenticated" };
-
+  const userId = await requireUserId();
   const parsed = kitListSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  if (!parsed.success) return { error: firstZodError(parsed.error) };
 
-  await updateKitList(session.user.id, kitListId, parsed.data);
+  await updateKitList(userId, kitListId, parsed.data);
   revalidatePath("/kits");
   revalidatePath(`/kits/${kitListId}`);
   return { success: true };
 }
 
 export async function deleteKitListAction(id: string): Promise<void> {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/sign-in");
-  await deleteKitList(session.user.id, id);
+  const userId = await requireUserId();
+  await deleteKitList(userId, id);
   revalidatePath("/kits");
 }
-
-// ---------------------------------------------------------------------------
-// Kit list item actions
-// ---------------------------------------------------------------------------
 
 const addItemSchema = z.object({
   kitListId: z.string().min(1),
@@ -78,17 +64,11 @@ export async function addKitListItemAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Not authenticated" };
-
+  const userId = await requireUserId();
   const parsed = addItemSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  if (!parsed.success) return { error: firstZodError(parsed.error) };
 
-  await addKitListItem(session.user.id, {
-    ...parsed.data,
-    optional: parsed.data.optional ?? false,
-  });
-
+  await addKitListItem(userId, { ...parsed.data, optional: parsed.data.optional ?? false });
   revalidatePath(`/kits/${parsed.data.kitListId}`);
   return { success: true };
 }
@@ -97,9 +77,8 @@ export async function removeKitListItemAction(
   kitListId: string,
   itemId: string,
 ): Promise<void> {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/sign-in");
-  await removeKitListItem(session.user.id, itemId);
+  const userId = await requireUserId();
+  await removeKitListItem(userId, itemId);
   revalidatePath(`/kits/${kitListId}`);
 }
 
@@ -108,8 +87,7 @@ export async function toggleOptionalAction(
   itemId: string,
   optional: boolean,
 ): Promise<void> {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/sign-in");
-  await updateKitListItem(session.user.id, itemId, { optional });
+  const userId = await requireUserId();
+  await updateKitListItem(userId, itemId, { optional });
   revalidatePath(`/kits/${kitListId}`);
 }

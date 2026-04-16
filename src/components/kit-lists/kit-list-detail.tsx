@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useTransition, useState, useMemo } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
   removeKitListItemAction,
   toggleOptionalAction,
 } from "@/app/kits/actions";
+import { formatWeight } from "@/lib/format";
 
 type Items = Awaited<ReturnType<typeof getKitListItems>>;
 type GearOptions = Awaited<ReturnType<typeof getActiveGearForPicker>>;
@@ -28,23 +29,26 @@ type Props = {
   gearOptions: GearOptions;
 };
 
-function formatWeight(grams: number | null | undefined) {
-  if (grams == null) return null;
-  return grams >= 1000 ? `${(grams / 1000).toFixed(2)} kg` : `${grams} g`;
-}
-
 function totalWeight(items: Items) {
   const total = items.reduce((sum, i) => sum + (i.gear.weightGrams ?? 0), 0);
   if (total === 0) return null;
-  return total >= 1000 ? `${(total / 1000).toFixed(2)} kg` : `${total} g`;
+  return formatWeight(total);
 }
+
+const navLinkClass = "text-sm text-muted-foreground hover:text-foreground";
 
 export function KitListDetail({ list, items, gearOptions }: Props) {
   const [isPending, startTransition] = useTransition();
   const [selectedGearId, setSelectedGearId] = useState<string>("");
 
-  const addedGearIds = new Set(items.map((i) => i.gearItemId));
-  const availableGear = gearOptions.filter((g) => !addedGearIds.has(g.id));
+  const addedGearIds = useMemo(
+    () => new Set(items.map((i) => i.gearItemId)),
+    [items],
+  );
+  const availableGear = useMemo(
+    () => gearOptions.filter((g) => !addedGearIds.has(g.id)),
+    [gearOptions, addedGearIds],
+  );
 
   const weight = totalWeight(items);
 
@@ -53,38 +57,32 @@ export function KitListDetail({ list, items, gearOptions }: Props) {
     const formData = new FormData();
     formData.set("kitListId", list.id);
     formData.set("gearItemId", selectedGearId);
-    startTransition(() => {
-      addKitListItemAction(null, formData).then(() => setSelectedGearId(""));
+    startTransition(async () => {
+      await addKitListItemAction(null, formData);
+      setSelectedGearId("");
     });
   }
 
   return (
     <div className="grid gap-6">
-      {/* Header */}
-      <div>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <Link
-              href="/kits"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              ← Kit lists
-            </Link>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight">{list.name}</h1>
-            {list.description && (
-              <p className="text-sm text-muted-foreground">{list.description}</p>
-            )}
-          </div>
-          {weight && (
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Total weight</p>
-              <p className="font-semibold">{weight}</p>
-            </div>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Link href="/kits" className={navLinkClass}>
+            ← Kit lists
+          </Link>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight">{list.name}</h1>
+          {list.description && (
+            <p className="text-sm text-muted-foreground">{list.description}</p>
           )}
         </div>
+        {weight && (
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Total weight</p>
+            <p className="font-semibold">{weight}</p>
+          </div>
+        )}
       </div>
 
-      {/* Item list */}
       <div className="grid gap-2">
         {items.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
@@ -96,20 +94,18 @@ export function KitListDetail({ list, items, gearOptions }: Props) {
               key={item.id}
               className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3"
             >
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="font-medium">
-                    {item.gear.name}
-                    {item.gear.retiredAt && (
-                      <span className="ml-2 text-xs text-muted-foreground">(retired)</span>
-                    )}
-                  </p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    {item.gear.brand && <span>{item.gear.brand}</span>}
-                    {formatWeight(item.gear.weightGrams) && (
-                      <span>{formatWeight(item.gear.weightGrams)}</span>
-                    )}
-                  </div>
+              <div>
+                <p className="font-medium">
+                  {item.gear.name}
+                  {item.gear.retiredAt && (
+                    <span className="ml-2 text-xs text-muted-foreground">(retired)</span>
+                  )}
+                </p>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {item.gear.brand && <span>{item.gear.brand}</span>}
+                  {item.gear.weightGrams != null && (
+                    <span>{formatWeight(item.gear.weightGrams)}</span>
+                  )}
                 </div>
               </div>
 
@@ -149,7 +145,6 @@ export function KitListDetail({ list, items, gearOptions }: Props) {
         )}
       </div>
 
-      {/* Add gear picker */}
       {availableGear.length > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-dashed p-4">
           <Select value={selectedGearId} onValueChange={(v) => setSelectedGearId(v ?? "")}>
@@ -161,9 +156,7 @@ export function KitListDetail({ list, items, gearOptions }: Props) {
                 <SelectItem key={g.id} value={g.id}>
                   {g.name}
                   {g.brand ? ` — ${g.brand}` : ""}
-                  {g.weightGrams != null
-                    ? ` (${g.weightGrams >= 1000 ? `${(g.weightGrams / 1000).toFixed(2)} kg` : `${g.weightGrams} g`})`
-                    : ""}
+                  {g.weightGrams != null ? ` (${formatWeight(g.weightGrams)})` : ""}
                 </SelectItem>
               ))}
             </SelectContent>

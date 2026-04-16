@@ -20,24 +20,13 @@ import {
 import { GearForm } from "./gear-form";
 import type { GearItem } from "@/db/schema";
 import { editGearItemAction, retireGearItemAction } from "@/app/gear/actions";
-
-function formatWeight(grams: number | null) {
-  if (grams == null) return "—";
-  return grams >= 1000 ? `${(grams / 1000).toFixed(2)} kg` : `${grams} g`;
-}
-
-function formatTempRange(low: number | null, high: number | null) {
-  if (low == null && high == null) return "—";
-  if (low != null && high != null) return `${low}°C – ${high}°C`;
-  if (low != null) return `≥ ${low}°C`;
-  return `≤ ${high}°C`;
-}
+import { formatWeight, formatTempRange } from "@/lib/format";
 
 type Props = { items: GearItem[] };
 
 export function GearTable({ items }: Props) {
   const [editItem, setEditItem] = useState<GearItem | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isRetirePending, startRetireTransition] = useTransition();
 
   if (items.length === 0) {
     return (
@@ -97,9 +86,9 @@ export function GearTable({ items }: Props) {
                       variant="ghost"
                       size="sm"
                       className="text-muted-foreground hover:text-destructive"
-                      disabled={isPending}
+                      disabled={isRetirePending}
                       onClick={() =>
-                        startTransition(() => retireGearItemAction(item.id))
+                        startRetireTransition(() => retireGearItemAction(item.id))
                       }
                     >
                       Retire

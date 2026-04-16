@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import {
@@ -116,26 +116,21 @@ export async function addKitListItem(
   userId: string,
   input: Pick<NewKitListItem, "kitListId" | "gearItemId" | "optional" | "notes">,
 ) {
-  // Verify the kit list belongs to the user
-  const list = await getKitList(userId, input.kitListId);
-  if (!list) throw new Error("Kit list not found");
+  // Single query: verify ownership + get max sort order via LEFT JOIN
+  const [result] = await db
+    .select({ maxOrder: sql<number | null>`MAX(${kitListItems.sortOrder})` })
+    .from(kitLists)
+    .leftJoin(kitListItems, eq(kitListItems.kitListId, kitLists.id))
+    .where(and(eq(kitLists.id, input.kitListId), eq(kitLists.userId, userId)))
+    .groupBy(kitLists.id);
 
-  // Get the current max sort order
-  const existing = await db
-    .select({ sortOrder: kitListItems.sortOrder })
-    .from(kitListItems)
-    .where(eq(kitListItems.kitListId, input.kitListId))
-    .orderBy(asc(kitListItems.sortOrder));
-
-  const maxOrder = existing.length > 0
-    ? Math.max(...existing.map((i) => i.sortOrder))
-    : -1;
+  if (!result) throw new Error("Kit list not found");
 
   const id = nanoid();
   await db.insert(kitListItems).values({
     ...input,
     id,
-    sortOrder: maxOrder + 1,
+    sortOrder: (result.maxOrder ?? -1) + 1,
   });
   return id;
 }
@@ -145,30 +140,31 @@ export async function updateKitListItem(
   itemId: string,
   input: Partial<Pick<NewKitListItem, "optional" | "notes">>,
 ) {
-  // Verify ownership via join
-  const [item] = await db
-    .select({ id: kitListItems.id })
-    .from(kitListItems)
-    .innerJoin(kitLists, eq(kitListItems.kitListId, kitLists.id))
+  // Ownership enforced via subquery — no pre-SELECT round-trip needed
+  await db
+    .update(kitListItems)
+    .set(input)
     .where(
-      and(eq(kitListItems.id, itemId), eq(kitLists.userId, userId)),
-    )
-    .limit(1);
-
-  if (!item) throw new Error("Item not found");
-  await db.update(kitListItems).set(input).where(eq(kitListItems.id, itemId));
+      and(
+        eq(kitListItems.id, itemId),
+        inArray(
+          kitListItems.kitListId,
+          db.select({ id: kitLists.id }).from(kitLists).where(eq(kitLists.userId, userId)),
+        ),
+      ),
+    );
 }
 
 export async function removeKitListItem(userId: string, itemId: string) {
-  const [item] = await db
-    .select({ id: kitListItems.id })
-    .from(kitListItems)
-    .innerJoin(kitLists, eq(kitListItems.kitListId, kitLists.id))
+  await db
+    .delete(kitListItems)
     .where(
-      and(eq(kitListItems.id, itemId), eq(kitLists.userId, userId)),
-    )
-    .limit(1);
-
-  if (!item) throw new Error("Item not found");
-  await db.delete(kitListItems).where(eq(kitListItems.id, itemId));
+      and(
+        eq(kitListItems.id, itemId),
+        inArray(
+          kitListItems.kitListId,
+          db.select({ id: kitLists.id }).from(kitLists).where(eq(kitLists.userId, userId)),
+        ),
+      ),
+    );
 }
