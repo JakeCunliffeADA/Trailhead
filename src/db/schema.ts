@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  index,
   integer,
   real,
   sqliteTable,
@@ -101,7 +102,9 @@ export const gearItems = sqliteTable("gear_items", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => [
+  index("idx_gear_items_user_id").on(t.userId),
+]);
 
 // ---------------------------------------------------------------------------
 // Kit lists
@@ -124,7 +127,9 @@ export const kitLists = sqliteTable("kit_lists", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => [
+  index("idx_kit_lists_user_id").on(t.userId),
+]);
 
 /**
  * An item within a kit list template.
@@ -176,7 +181,9 @@ export const routes = sqliteTable("routes", {
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => [
+  index("idx_routes_user_id").on(t.userId),
+]);
 
 // ---------------------------------------------------------------------------
 // Trips
@@ -202,7 +209,9 @@ export const trips = sqliteTable("trips", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => [
+  index("idx_trips_user_id").on(t.userId),
+]);
 
 /**
  * Routes attached to a trip (many-to-many).
@@ -243,7 +252,9 @@ export const tripPackingItems = sqliteTable("trip_packing_items", {
   notes: text("notes"),
   packed: integer("packed", { mode: "boolean" }).notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
-});
+}, (t) => [
+  index("idx_trip_packing_items_trip_id").on(t.tripId),
+]);
 
 // ---------------------------------------------------------------------------
 // Weather cache
@@ -282,6 +293,7 @@ export const weatherCache = sqliteTable(
       t.routeId,
       t.forecastDate,
     ),
+    index("idx_weather_cache_trip_id").on(t.tripId),
   ],
 );
 
