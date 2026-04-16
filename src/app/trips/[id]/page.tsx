@@ -4,10 +4,13 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getTrip, getTripRoutes, getTripPackingItems } from "@/server/trips";
 import { getRoutes } from "@/server/routes";
+import { getTripWeather } from "@/server/weather";
 import { DeleteTripButton } from "@/components/trips/delete-trip-button";
 import { PackingChecklist } from "@/components/trips/packing-checklist";
 import { AddPackingItemForm } from "@/components/trips/add-packing-item-form";
 import { TripRoutesManager } from "@/components/trips/trip-routes-manager";
+import { WeatherForecast } from "@/components/trips/weather-forecast";
+import type { DailyWeatherSummary } from "@/lib/weather/fetch";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -41,6 +44,11 @@ export default async function TripDetailPage({ params }: Props) {
 
   if (!trip) notFound();
 
+  const weatherMap = await getTripWeather(session.user.id, id);
+  const weatherByRoute = Object.fromEntries(
+    Array.from(weatherMap.entries()).map(([k, v]) => [k, v as DailyWeatherSummary[]]),
+  );
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -68,6 +76,20 @@ export default async function TripDetailPage({ params }: Props) {
           availableRoutes={allRoutes.map((r) => ({ id: r.id, name: r.name }))}
         />
       </section>
+
+      {/* Weather */}
+      {tripRoutes.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-lg font-semibold">Weather forecast</h2>
+          <WeatherForecast
+            attachedRoutes={tripRoutes.map((tr) => ({
+              routeId: tr.routeId,
+              name: tr.route.name,
+            }))}
+            weatherByRoute={weatherByRoute}
+          />
+        </section>
+      )}
 
       {/* Packing checklist */}
       <section>
