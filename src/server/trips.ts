@@ -219,6 +219,16 @@ export async function addTripPackingItem(
     .limit(1);
   if (!trip) throw new Error("Trip not found");
 
+  // If a gearItemId is supplied, verify it belongs to this user
+  if (input.gearItemId) {
+    const [gear] = await db
+      .select({ id: gearItems.id })
+      .from(gearItems)
+      .where(and(eq(gearItems.id, input.gearItemId), eq(gearItems.userId, userId)))
+      .limit(1);
+    if (!gear) throw new Error("Gear item not found");
+  }
+
   const [maxRow] = await db
     .select({ max: sql<number | null>`MAX(${tripPackingItems.sortOrder})` })
     .from(tripPackingItems)

@@ -90,6 +90,7 @@ const addItemSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   weightGrams: z.coerce.number().min(0).optional(),
   category: z.string().optional(),
+  gearItemId: z.string().optional(),
 });
 
 export async function addTripPackingItemAction(
@@ -103,6 +104,7 @@ export async function addTripPackingItemAction(
     name: formData.get("name"),
     weightGrams: formData.get("weightGrams") || undefined,
     category: formData.get("category") || undefined,
+    gearItemId: formData.get("gearItemId") || undefined,
   });
 
   if (!parsed.success) return { error: firstZodError(parsed.error) };
