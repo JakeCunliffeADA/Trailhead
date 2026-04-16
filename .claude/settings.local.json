@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm --version)",
+      "Bash(npm install *)",
+      "Bash(gh pr create --title 'docs: replace README with provided version' --body ' *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)",
+      "Bash(pnpm create *)",
+      "Bash(pnpm install *)"
+    ]
+  }
+}
