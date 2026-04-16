@@ -51,7 +51,8 @@ Fill in `.env.local` — see [Environment variables](#environment-variables) bel
 ### Database
 
 ```bash
-pnpm db:push      # push schema to Turso
+pnpm db:migrate   # apply pending migrations to Turso (use this in production)
+pnpm db:push      # sync schema directly — dev only, no migration history
 pnpm db:seed      # optional: populate with sample gear and a kit list
 ```
 
@@ -97,10 +98,24 @@ pnpm start        # run production build
 pnpm typecheck    # tsc --noEmit
 pnpm lint         # ESLint
 pnpm test         # Vitest
-pnpm db:push      # apply schema to database
+pnpm db:migrate   # apply pending migrations (production)
+pnpm db:generate  # generate a new migration from schema changes
+pnpm db:push      # sync schema directly (dev only — no migration history)
 pnpm db:studio    # open Drizzle Studio
 pnpm db:seed      # seed sample data
 ```
+
+## Deploying to Vercel
+
+1. Push the repo to GitHub and import it in the Vercel dashboard.
+2. Set the required environment variables (see `.env.example`).
+3. **Before the first deploy** (and after any schema change), run migrations against your production Turso database:
+   ```bash
+   TURSO_DATABASE_URL=<prod-url> TURSO_AUTH_TOKEN=<prod-token> pnpm db:migrate
+   ```
+4. Deploy — Vercel will run `pnpm install && pnpm build` automatically.
+
+> **Never run `pnpm db:push` against a production database.** It modifies the schema in-place with no history and cannot be rolled back.
 
 ## Project structure
 
