@@ -25,7 +25,13 @@ export default async function GearPage() {
         <AddGearDialog />
       </div>
 
-      <GearTable items={items} />
+      {items.length === 0 ? (
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          No gear yet. Add your first item to get started.
+        </p>
+      ) : (
+        <GearTable items={items} />
+      )}
     </main>
   );
 }

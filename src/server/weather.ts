@@ -131,8 +131,11 @@ export async function getTripWeather(
         }
 
         result.set(r.routeId, summaries);
-      } catch {
-        // Weather fetch failed — return no data for this route rather than crashing
+      } catch (err) {
+        console.error(
+          `[weather] fetch failed trip=${tripId} route=${r.routeId}:`,
+          err,
+        );
       }
     }),
   );
