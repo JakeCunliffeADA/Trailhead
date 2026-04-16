@@ -8,7 +8,6 @@
 import "dotenv/config";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
-import { sql } from "drizzle-orm";
 import {
   users,
   gearItems,
@@ -189,19 +188,17 @@ async function seed() {
     })
     .onConflictDoNothing();
 
-  // Gear items
-  for (const item of SEED_GEAR) {
-    await db.insert(gearItems).values(item).onConflictDoNothing();
-  }
+  await db.insert(gearItems).values(SEED_GEAR).onConflictDoNothing();
   console.log(`  ✓ ${SEED_GEAR.length} gear items`);
 
-  // Kit lists
-  await db.insert(kitLists).values(SEED_KIT_LIST_3_SEASON).onConflictDoNothing();
-  await db.insert(kitLists).values(SEED_KIT_LIST_DAY_HIKE).onConflictDoNothing();
-
-  for (const item of [...SEED_KIT_ITEMS_3_SEASON, ...SEED_KIT_ITEMS_DAY_HIKE]) {
-    await db.insert(kitListItems).values(item).onConflictDoNothing();
-  }
+  await db
+    .insert(kitLists)
+    .values([SEED_KIT_LIST_3_SEASON, SEED_KIT_LIST_DAY_HIKE])
+    .onConflictDoNothing();
+  await db
+    .insert(kitListItems)
+    .values([...SEED_KIT_ITEMS_3_SEASON, ...SEED_KIT_ITEMS_DAY_HIKE])
+    .onConflictDoNothing();
   console.log("  ✓ 2 kit lists");
 
   console.log("Done.");
