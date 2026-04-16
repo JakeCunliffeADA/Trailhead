@@ -5,11 +5,13 @@ import { auth } from "@/auth";
 import { getTrip, getTripRoutes, getTripPackingItems } from "@/server/trips";
 import { getRoutes } from "@/server/routes";
 import { getTripWeather } from "@/server/weather";
+import { getTripSuggestions } from "@/server/suggestions";
 import { DeleteTripButton } from "@/components/trips/delete-trip-button";
 import { PackingChecklist } from "@/components/trips/packing-checklist";
 import { AddPackingItemForm } from "@/components/trips/add-packing-item-form";
 import { TripRoutesManager } from "@/components/trips/trip-routes-manager";
 import { WeatherForecast } from "@/components/trips/weather-forecast";
+import { PackingSuggestions } from "@/components/trips/packing-suggestions";
 import type { DailyWeatherSummary } from "@/lib/weather/fetch";
 
 type Props = { params: Promise<{ id: string }> };
@@ -44,7 +46,10 @@ export default async function TripDetailPage({ params }: Props) {
 
   if (!trip) notFound();
 
-  const weatherMap = await getTripWeather(session.user.id, id);
+  const [weatherMap, suggestions] = await Promise.all([
+    getTripWeather(session.user.id, id),
+    getTripSuggestions(session.user.id, id),
+  ]);
   const weatherByRoute = Object.fromEntries(
     Array.from(weatherMap.entries()).map(([k, v]) => [k, v as DailyWeatherSummary[]]),
   );
@@ -88,6 +93,14 @@ export default async function TripDetailPage({ params }: Props) {
             }))}
             weatherByRoute={weatherByRoute}
           />
+        </section>
+      )}
+
+      {/* Packing suggestions */}
+      {suggestions.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-lg font-semibold">Gear suggestions</h2>
+          <PackingSuggestions suggestions={suggestions} />
         </section>
       )}
 
