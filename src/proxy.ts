@@ -23,6 +23,6 @@ export default auth((req: NextRequest & { auth: { user?: { id?: string } } | nul
 });
 
 export const config = {
-  // Run middleware on all routes except static assets and Next.js internals
+  // Run on all routes except static assets and Next.js internals
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };
