@@ -5,7 +5,8 @@
  * Safe to re-run: uses upsert-style inserts (onConflictDoNothing).
  */
 
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import {
